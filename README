@@ -1,0 +1,169 @@
+# Introduction
+In this project, I dive into the job market for Data Engineering! This project looks into top paid jobs, skills, and the demand for each skill in the data industry for engineers.
+
+Take a look at the SQL queries and raw data I used here: [data_eng_analysis_project folder](/data_eng_analysis_project/)
+# Background
+In recent times, Data Engineering has become a profession with high demand. As an ambitious data analyst, I sometimes wonder if I should invest time into learning the nuances of Data Engineering. To answer that, I looked into current data engineering jobs on the market. I wanted to take a look into what skills I should hone and what salary I could potentially accomplish.
+
+The dataset used in this analysis comes from Luke Barousse's [SQL course](https://www.lukebarousse.com/sql). This dataset is full of information about professions in the data industry. Luke has even made an interesting [dashboard](https://datanerd.tech/) that could be used by anyone without any prior coding or SQL experience, who is curious about the Big Data scene - I highly recommend checking it out.
+### Questions I wanted analyzed
+In order to analyze the data to my liking, I needed to construct a set of questions that I could create queries for. Fortunately, Luke's SQL course goes through some questions to draw inspiration from:
+1. What are the top-paying jobs for my role?
+2. What are the skills required for these top-paying roles? 
+3. What are the most in-demand skills for my role?
+4. What are the top skills based on salary for my role? 
+5. What are the most optimal skills to learn?
+
+Using these questions as my inspiration, I modified them to fit my needs:
+
+1. What are the highest paid roles in data engineering? 
+2. What are the most in-demand skills for data engineering?
+3. What are the most optimal skills to learn for data engineering?
+
+# Tools Used
+"The best investment is in the tools of one's own trade." - Benjamin Franklin
+
+The tools I have chosen to use in this project:
+- **SQL** - The sole purpose of this project was to expand my ability to use SQL as a tool, so that it can assist me in my future data endeavors.
+- **PostgreSQL** - The database management system that taught me the essentials of database management and got me hooked on learning more
+- **Visual Studio Code** - Possibly my favorite database management tool, it is so versatile and very intuitive. I have recently been coding in Python on Visual Studio as well.
+# Analysis
+The three questions I have chosen were used to build queries in SQL, these were used to return tangible data that I can use to satisfy my curiosity.
+### 1. Top Paying Data Engineering Jobs
+In order to find the top paying data engineering positions, I filtered the data by jobs the are called "Data Engineer". Then I filtered the job location to exclude remote jobs (I wanted to get an idea of where these jobs are located)
+
+```sql
+SELECT
+	job_id,
+	job_title,
+	job_location,
+	job_schedule_type,
+	salary_year_avg,
+	job_posted_date,
+	name AS company_name
+FROM
+	job_postings_fact
+	LEFT JOIN company_dim ON job_postings_fact.company_id = company_dim.company_id
+WHERE
+	job_title = 'Data Engineer'
+	AND salary_year_avg IS NOT NULL
+	AND job_location IS NOT NULL
+    AND job_location <> 'Anywhere'
+ORDER BY
+	salary_year_avg DESC 
+LIMIT 25
+```
+
+I determined that in 2023, the highest paying data engineering role pays about $375k and that a notable number of of the top 25 are located in New York.
+### 2. In Demand Skills
+To see what skills are most frequently requested in job postings, I had to query how many jobs mentioned each skill.
+
+```sql
+SELECT
+  skills_dim.skills,
+  COUNT(skills_job_dim.job_id) AS demand_count
+FROM
+  job_postings_fact
+  INNER JOIN
+    skills_job_dim ON job_postings_fact.job_id = skills_job_dim.job_id
+  INNER JOIN
+    skills_dim ON skills_job_dim.skill_id = skills_dim.skill_id
+WHERE
+  job_postings_fact.job_title_short = 'Data Engineer'
+GROUP BY
+  skills_dim.skills
+ORDER BY
+  demand_count DESC
+LIMIT 5;
+```
+The query yielded this table:
+
+|skills|demand_count|
+|------|------------|
+|sql   |113375      |
+|python|108265      |
+|aws   |62174       |
+|azure |60823       |
+|spark |53789       |
+
+The top most skills used by data engineers are SQL and Python, with over 10 thousand jobs mentioning them. Following those, AWS and Microsoft Azure are the next most in demand, at around six thousand jobs mentioning those two.
+
+### 3. Optimal Skills
+Finally, I queried the most in demand and highest paying data engineering skills to see which skill is worth the most investment.
+
+``` SQL
+WITH skills_demand AS (
+  SELECT
+    skills_dim.skill_id,
+		skills_dim.skills,
+    COUNT(skills_job_dim.job_id) AS demand_count
+  FROM
+    job_postings_fact
+	  INNER JOIN
+	    skills_job_dim ON job_postings_fact.job_id = skills_job_dim.job_id
+	  INNER JOIN
+	    skills_dim ON skills_job_dim.skill_id = skills_dim.skill_id
+  WHERE
+     job_title_short = 'Data Engineer'
+	AND salary_year_avg IS NOT NULL
+    AND job_location IS NOT NULL
+    AND job_location <> 'Anywhere'
+  GROUP BY
+    skills_dim.skill_id
+),
+
+-- Skills with high average salaries for Data Engineer roles
+average_salary AS (
+  SELECT
+    skills_job_dim.skill_id,
+    AVG(job_postings_fact.salary_year_avg) AS avg_salary
+  FROM
+    job_postings_fact
+	  INNER JOIN
+	    skills_job_dim ON job_postings_fact.job_id = skills_job_dim.job_id
+  WHERE
+        job_title_short = 'Data Engineer'
+				AND salary_year_avg IS NOT NULL
+       AND job_location IS NOT NULL
+    AND job_location <> 'Anywhere'
+  GROUP BY
+    skills_job_dim.skill_id
+)
+
+-- Return high demand and high salaries for 5 skills, rounded to 3 significant figures
+SELECT
+  skills_demand.skills,
+  skills_demand.demand_count,
+  ROUND(average_salary.avg_salary, -3) AS avg_salary 
+FROM
+  skills_demand
+	INNER JOIN
+	  average_salary ON skills_demand.skill_id = average_salary.skill_id
+WHERE demand_count > 10
+ORDER BY
+  demand_count DESC, 
+	avg_salary DESC
+Limit 5
+; 
+```
+The query yielded this table:
+
+|skills|demand_count|avg_salary|
+|------|------------|-----|
+|sql   |2580|128000|
+|python|2460|131000|
+|aws   |1607|134000|
+|spark |1333|135000|
+|azure |1190|129000|
+
+This is very interesting. This query has shown me that, although all of the top 5 skills are very optimal to study and learn, learning more about Spark than Azure seems to be the better learning path.
+
+# Conclusions
+### To summarize my findings: 
+1. New York, NY, seems to have a lot of high paying data engineering roles -  with the highest salary being $375k. That number itches my brain and makes me consider switching into data engineering a lot more now than at the start.
+2. The most used skill by data engineers in their roles are SQL and Python, with AWS being more used than Azure when it comes to database services.
+3. The most optimal skills to learn are SQL and Python, with the most optimal database service being AWS.
+### Key Takeaways:
+This project has shown that SQL is cemented as a tool, for not just data analysts - like myself, but also data engineers. I have learned that in many cases, analysts and engineers use very similar tools. In order to be the most well rounded data professional I can be, I must learn the ins-and-outs of SQL. In addition to this, if I ever decide to delve deeper into the database management side, I must be proficient in Python and pick up the ways of AWS - as these tool will be the most optimal way to enter the data engineering field. 
+
+It interests me that throughout the data industry the same tools are used. I am curious to see how each tool is used in each profession. Perhaps my next analysis will somehow answer this question. I hope future analysis will spark my neurons as much as this dataset has. This analysis has been very fun and I hope you found it as interesting as I did.

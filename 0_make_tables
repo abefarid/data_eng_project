@@ -1,0 +1,75 @@
+/*First course of action is to create tables for the data given. 
+The raw data can be found in a folder, under data_eng_analysis_project, labeled jobs_raw_data.
+Here, I made the tables and connected them all.
+Then I copied the data from the .csv file into the tables.
+*/
+
+-- Creating the company_dim table with primary key
+
+CREATE TABLE public.company_dim
+(
+    company_id INT PRIMARY KEY,
+    name TEXT,
+    link TEXT,
+    link_google TEXT,
+    thumbnail TEXT
+);
+
+-- Creating the skills_dim table with primary key
+CREATE TABLE public.skills_dim
+(
+    skill_id INT PRIMARY KEY,
+    skills TEXT,
+    type TEXT
+);
+
+-- Creating the job_postings_fact table with primary key
+CREATE TABLE public.job_postings_fact
+(
+    job_id INT PRIMARY KEY,
+    company_id INT,
+    job_title_short VARCHAR(255),
+    job_title TEXT,
+    job_location TEXT,
+    job_via TEXT,
+    job_schedule_type TEXT,
+    job_work_from_home BOOLEAN,
+    search_location TEXT,
+    job_posted_date TIMESTAMP,
+    job_no_degree_mention BOOLEAN,
+    job_health_insurance BOOLEAN,
+    job_country TEXT,
+    salary_rate TEXT,
+    salary_year_avg NUMERIC,
+    salary_hour_avg NUMERIC,
+    FOREIGN KEY (company_id) REFERENCES public.company_dim (company_id)
+);
+
+-- Creating the skills_job_dim table with a composite primary key and foreign keys
+CREATE TABLE public.skills_job_dim
+(
+    job_id INT,
+    skill_id INT,
+    PRIMARY KEY (job_id, skill_id),
+    FOREIGN KEY (job_id) REFERENCES public.job_postings_fact (job_id),
+    FOREIGN KEY (skill_id) REFERENCES public.skills_dim (skill_id)
+);
+
+-- Copying the data from the CSV files into the tables just created
+
+COPY company_dim
+FROM 'C:\Undergrad\Data Analytics\data_eng_project\company_dim.csv'
+DELIMITER ',' CSV HEADER;
+
+COPY job_postings_fact
+FROM 'C:\Undergrad\Data Analytics\data_eng_project\job_postings_fact.csv'
+DELIMITER ',' CSV HEADER;
+
+COPY skills_dim
+FROM 'C:\Undergrad\Data Analytics\data_eng_project\skills_dim.csv'
+DELIMITER ',' CSV HEADER;
+
+COPY skills_job_dim
+FROM 'C:\Undergrad\Data Analytics\data_eng_project\skills_job_dim.csv'
+DELIMITER ',' CSV HEADER;
+C:\Undergrad\Data Analytics\data_eng_project\README
